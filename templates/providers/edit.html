@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Registro RTN - SIG-INATUR{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1><i class="fas fa-edit" style="color: var(--primary);"></i> Editar Prestador: {{ provider.num_rtn }}</h1>
+    <div class="actions">
+        <a href="{{ url_for('providers.index') }}" class="btn btn-outline">Volver al Listado</a>
+    </div>
+</div>
+
+<div class="card">
+    <form action="{{ url_for('providers.edit', id=provider.id) }}" method="POST">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Número de RTN</label>
+                <input type="text" name="num_rtn" value="{{ provider.num_rtn }}" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;"
+                    placeholder="Ej: RTN-001">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">RIF</label>
+                <input type="text" name="rif" value="{{ provider.rif }}" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;"
+                    placeholder="Ej: J-12345678-9">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Razón Social / Nombre
+                    Comercial</label>
+                <input type="text" name="razon_social" value="{{ provider.razon_social }}" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Dirección Fiscal</label>
+                <textarea name="direccion" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem; min-height: 100px;">{{ provider.direccion }}</textarea>
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Teléfono de Contacto</label>
+                <input type="text" name="telefono" value="{{ provider.telefono }}" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Correo Electrónico</label>
+                <input type="email" name="email" value="{{ provider.email }}" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Categoría</label>
+                <select name="category_id" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if provider.category_id==cat.id %}selected{% endif %}>{{ cat.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Municipio (Ubicación)</label>
+                <select name="municipality_id" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+                    {% for state in states %}
+                    <optgroup label="{{ state.name }}">
+                        {% for mun in state.municipalities %}
+                        <option value="{{ mun.id }}" {% if provider.municipality_id==mun.id %}selected{% endif %}>{{
+                            mun.name }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Estatus Legal</label>
+                <select name="status" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+                    <option value="activo" {% if provider.status=='activo' %}selected{% endif %}>Activo</option>
+                    <option value="vencido" {% if provider.status=='vencido' %}selected{% endif %}>Vencido</option>
+                    <option value="tramite" {% if provider.status=='tramite' %}selected{% endif %}>En Trámite</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Fecha de Vencimiento RTN</label>
+                <input type="date" name="valid_until"
+                    value="{{ provider.valid_until.strftime('%Y-%m-%d') if provider.valid_until else '' }}"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Capacidad
+                    (Aforo/Habitaciones)</label>
+                <input type="number" name="capacity" value="{{ provider.capacity }}"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+            </div>
+        </div>
+        <div style="margin-top: 2rem; border-top: 1px solid #eee; padding-top: 1.5rem; text-align: right;">
+            <button type="submit" class="btn">Actualizar Prestador</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

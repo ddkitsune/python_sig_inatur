@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SIG-INATUR{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #003366;
+            --secondary: #f0f4f8;
+            --accent: #ff9900;
+            --text: #333;
+            --sidebar-width: 260px;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--secondary);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--primary);
+            color: white;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .sidebar h2 {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 1rem;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0;
+            border-radius: 0.5rem;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            color: var(--primary);
+        }
+
+        /* Dashboard Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 80px;
+                padding: 1rem 0.5rem;
+            }
+
+            .sidebar h2 {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 80px;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <div
+                style="background: white; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: var(--primary); font-size: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                <i class="fas fa-hotel"></i>
+            </div>
+            <h2 style="font-size: 1.2rem; letter-spacing: 1px;">SIG-INATUR</h2>
+        </div>
+
+        {% if current_user.is_authenticated %}
+        <div
+            style="padding: 0.75rem 1rem; margin-bottom: 1.5rem; background: rgba(255,255,255,0.08); border-radius: 10px; border-left: 3px solid var(--accent);">
+            <div
+                style="font-size: 0.65rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem;">
+                Usuario Actual</div>
+            <div style="font-weight: 600; font-size: 0.9rem;">{{ current_user.name }}</div>
+            <div style="font-size: 0.7rem; color: var(--accent); font-weight: 500;">
+                <i class="fas fa-shield-halved"></i> {{ current_user.role | capitalize }}
+            </div>
+        </div>
+
+        <a href="{{ url_for('dashboard.index') }}"
+            class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+            <i class="fas fa-chart-line" style="margin-right: 10px; width: 20px;"></i> Dashboard
+        </a>
+        <a href="{{ url_for('providers.index') }}"
+            class="nav-link {% if 'providers' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-users-gear" style="margin-right: 10px; width: 20px;"></i> Gestión RTN
+        </a>
+        <a href="{{ url_for('reports.rtn') }}" class="nav-link">
+            <i class="fas fa-file-pdf" style="margin-right: 10px; width: 20px;"></i> Reportes PDF
+        </a>
+
+        {% if current_user.role == 'administrador' %}
+        <a href="{{ url_for('users.index') }}" class="nav-link {% if 'users' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-user-gear" style="margin-right: 10px; width: 20px;"></i> Usuarios
+        </a>
+        <a href="{{ url_for('ia.chat') }}" class="nav-link {% if 'ia' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-robot" style="margin-right: 10px; width: 20px;"></i> Asistente IA
+        </a>
+        <a href="{{ url_for('admin.backups_index') }}"
+            class="nav-link {% if 'admin' in request.endpoint %}active{% endif %}">
+            <i class="fas fa-database" style="margin-right: 10px; width: 20px;"></i> Respaldo BD
+        </a>
+        {% endif %}
+
+        <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <form action="{{ url_for('auth.logout') }}" method="POST">
+                <button type="submit" class="nav-link"
+                    style="width: 100%; text-align: left; background: none; border: none; cursor: pointer; color: #ff9999; font-weight: 600;">
+                    <i class="fas fa-right-from-bracket" style="margin-right: 10px; width: 20px;"></i> Salir del Sistema
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

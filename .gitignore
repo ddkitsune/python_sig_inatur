@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+.env
+instance/
+vector_db/
+*.pdf
+explicacion_proyecto.txt
+node_modules/
+.DS_Store

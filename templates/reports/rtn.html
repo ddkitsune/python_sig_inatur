@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes PDF - SIG-INATUR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 2rem;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-group select {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        color: #333;
+        background: #f8fafc;
+        outline: none;
+        transition: border-color 0.2s;
+        cursor: pointer;
+    }
+
+    .form-group select:focus {
+        border-color: var(--primary);
+        background: white;
+    }
+
+    .report-preview {
+        background: linear-gradient(135deg, #e8f0fe 0%, #d0e8ff 100%);
+        border: 2px dashed rgba(0, 51, 102, 0.2);
+        border-radius: 1rem;
+        padding: 3rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .report-preview i {
+        font-size: 4rem;
+        color: var(--primary);
+        margin-bottom: 1rem;
+        opacity: 0.7;
+    }
+
+    .report-preview h3 {
+        font-size: 1.25rem;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .report-preview p {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .btn-pdf {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        color: white;
+        padding: 0.85rem 2rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-pdf:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
+    }
+
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.75rem;
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .info-box i {
+        color: #3b82f6;
+        font-size: 1.2rem;
+        margin-top: 0.1rem;
+    }
+
+    .info-box p {
+        color: #1e3a5f;
+        font-size: 0.875rem;
+        line-height: 1.6;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1><i class="fas fa-file-pdf" style="color: #dc2626;"></i> Módulo de Reportes</h1>
+</div>
+
+<!-- Información descriptiva -->
+<div class="info-box">
+    <i class="fas fa-circle-info"></i>
+    <p>
+        Genere reportes en formato PDF del <strong>Registro Turístico Nacional (RTN)</strong>.
+        Aplique filtros para segmentar por categoría, estado o estatus antes de descargar el documento.
+        El reporte incluye membrete institucional de INATUR y paginación automática.
+    </p>
+</div>
+
+<!-- Preview del reporte -->
+<div class="report-preview">
+    <i class="fas fa-file-pdf"></i>
+    <h3>Reporte RTN — Prestadores de Servicio Turístico</h3>
+    <p>Documento PDF con encabezado institucional, listado completo y filtros aplicados.</p>
+</div>
+
+<!-- Filtros -->
+<div class="filter-card">
+    <div
+        style="font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-filter"></i> Configurar Filtros del Reporte
+    </div>
+
+    <form action="{{ url_for('reports.rtn_pdf') }}" method="GET" id="report-form">
+        <div class="filter-grid">
+            <div class="form-group">
+                <label><i class="fas fa-tags" style="margin-right: 5px;"></i>Categoría</label>
+                <select name="category_id" id="sel-category">
+                    <option value="">— Todas las categorías —</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-map-location-dot" style="margin-right: 5px;"></i>Estado</label>
+                <select name="state_id" id="sel-state">
+                    <option value="">— Todos los estados —</option>
+                    {% for state in states %}
+                    <option value="{{ state.id }}">{{ state.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-circle-check" style="margin-right: 5px;"></i>Estatus</label>
+                <select name="status">
+                    <option value="">— Todos los estatus —</option>
+                    <option value="activo">Activo</option>
+                    <option value="vencido">Vencido</option>
+                    <option value="tramite">En Trámite</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <button type="submit" class="btn-pdf">
+                <i class="fas fa-download"></i> Descargar PDF
+            </button>
+            <a href="{{ url_for('providers.export_csv') }}" class="btn btn-outline"
+                style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-file-csv"></i> Exportar CSV
+            </a>
+            <span style="font-size: 0.8rem; color: #888;">
+                <i class="fas fa-info-circle"></i> El archivo se descargará automáticamente en formato PDF.
+            </span>
+        </div>
+    </form>
+</div>
+
+<!-- Panel informativo de columnas -->
+<div class="card">
+    <div class="card-title" style="margin-bottom: 1rem;">Contenido del Reporte PDF</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+        {% for col in ['Número RTN', 'RIF', 'Razón Social', 'Categoría', 'Estado', 'Municipio', 'Estatus', 'Fecha de
+        Vencimiento'] %}
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #444;">
+            <i class="fas fa-check-circle" style="color: #22c55e;"></i> {{ col }}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

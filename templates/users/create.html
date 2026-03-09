@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Usuario - SIG-INATUR{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1><i class="fas fa-plus" style="color: var(--primary);"></i> Registrar Nuevo Usuario</h1>
+    <div class="actions">
+        <a href="{{ url_for('users.index') }}" class="btn btn-outline">Volver al Listado</a>
+    </div>
+</div>
+
+<div class="card">
+    <form action="{{ url_for('users.create') }}" method="POST">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Nombre Completo</label>
+                <input type="text" name="name" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Correo Electrónico</label>
+                <input type="email" name="email" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Contraseña</label>
+                <input type="password" name="password" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Rol del Sistema</label>
+                <select name="role" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem;">
+                    <option value="administrador">Administrador</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="tecnico">Técnico</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-top: 2rem; border-top: 1px solid #eee; padding-top: 1.5rem; text-align: right;">
+            <button type="submit" class="btn">Guardar Usuario</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

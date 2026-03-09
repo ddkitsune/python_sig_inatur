@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Expediente — {{ provider.razon_social }} - SIG-INATUR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .section-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #555;
+        border-left: 4px solid var(--accent);
+        padding-left: 0.6rem;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    @media (max-width: 700px) {
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .detail-row {
+        margin-bottom: 0.85rem;
+        font-size: 0.9rem;
+        color: #333;
+    }
+
+    .detail-row strong {
+        display: block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+        margin-bottom: 0.2rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.9rem;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+
+    .status-activo {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-vencido {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-tramite {
+        background: #fef9c3;
+        color: #854d0e;
+    }
+
+    .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        background: #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .stat-cell {
+        background: #f8fafc;
+        padding: 1.25rem;
+        text-align: center;
+    }
+
+    .stat-cell .label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-cell .value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .audit-footer {
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+        font-size: 0.78rem;
+        color: #9ca3af;
+        text-align: center;
+        line-height: 1.8;
+    }
+
+    .page-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-danger {
+        background: transparent;
+        border: 2px solid #ef4444;
+        color: #ef4444;
+        padding: 0.65rem 1.25rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s;
+    }
+
+    .btn-danger:hover {
+        background: #ef4444;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1><i class="fas fa-id-card" style="color: var(--primary);"></i> Expediente del Prestador</h1>
+    <div class="page-actions">
+        <a href="{{ url_for('providers.index') }}" class="btn btn-outline"
+            style="display: inline-flex; align-items: center; gap: 0.4rem;">
+            <i class="fas fa-arrow-left"></i> Volver al Listado
+        </a>
+        <a href="{{ url_for('providers.edit', id=provider.id) }}" class="btn btn-outline"
+            style="border-color: #4b5563; color: #4b5563; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <i class="fas fa-edit"></i> Editar
+        </a>
+        {% if current_user.role == 'administrador' %}
+        <form action="{{ url_for('providers.delete', id=provider.id) }}" method="POST"
+            onsubmit="return confirm('¿Está seguro de eliminar este registro del RTN?');" style="margin: 0;">
+            <button type="submit" class="btn-danger">
+                <i class="fas fa-trash"></i> Eliminar
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="max-width: 920px;">
+    <!-- Cabecera del expediente -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;
+                margin-bottom: 2rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;
+                flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;
+                        text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">
+                Prestador de Servicio Turístico
+            </div>
+            <h2 style="color: var(--primary); font-size: 1.5rem; margin-bottom: 0.75rem;">
+                {{ provider.razon_social }}
+            </h2>
+            <span style="background: #e0e7ff; color: #4338ca; padding: 0.35rem 0.9rem;
+                         border-radius: 9999px; font-size: 0.8rem; font-weight: 600;">
+                <i class="fas fa-tag" style="margin-right: 4px;"></i>{{ provider.category.name }}
+            </span>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 700;
+                        text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.35rem;">
+                Número RTN
+            </div>
+            <div
+                style="font-size: 1.4rem; font-weight: 800; color: var(--primary); font-family: 'Courier New', monospace;">
+                {{ provider.num_rtn }}
+            </div>
+            <div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">
+                RIF: <strong>{{ provider.rif }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de estado clave -->
+    <div class="stats-bar">
+        <div class="stat-cell">
+            <div class="label">Estatus Legal</div>
+            <span class="status-badge status-{{ provider.status }}">
+                {{ provider.status | upper }}
+            </span>
+        </div>
+        <div class="stat-cell">
+            <div class="label">Vigencia RTN</div>
+            <div class="value">
+                {% if provider.valid_until %}
+                {{ provider.valid_until.strftime('%d/%m/%Y') }}
+                {% else %}
+                <span style="color: #94a3b8; font-size: 0.9rem;">Sin fecha</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="stat-cell">
+            <div class="label">Capacidad Oferta</div>
+            <div class="value">{{ provider.capacity }} <small style="font-size:0.7rem;color:#64748b;">Plazas/Hab</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grilla de detalles -->
+    <div class="detail-grid">
+        <div>
+            <div class="section-title"><i class="fas fa-phone" style="margin-right:6px;"></i>Información de Contacto
+            </div>
+            <div class="detail-row">
+                <strong>Teléfono</strong>
+                <a href="tel:{{ provider.telefono }}" style="color: inherit; text-decoration: none;">
+                    <i class="fas fa-phone" style="color: #94a3b8; margin-right: 5px; font-size: 0.8rem;"></i>
+                    {{ provider.telefono }}
+                </a>
+            </div>
+            <div class="detail-row">
+                <strong>Correo Electrónico</strong>
+                <a href="mailto:{{ provider.email }}" style="color: var(--primary); text-decoration: none;">
+                    <i class="fas fa-envelope" style="margin-right: 5px; font-size: 0.8rem;"></i>
+                    {{ provider.email }}
+                </a>
+            </div>
+            <div class="detail-row">
+                <strong>Dirección</strong>
+                <i class="fas fa-location-dot" style="color: #94a3b8; margin-right: 5px; font-size: 0.8rem;"></i>
+                {{ provider.direccion }}
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title"><i class="fas fa-map-location-dot" style="margin-right:6px;"></i>Ubicación
+                Geográfica</div>
+            <div class="detail-row">
+                <strong>Estado</strong>
+                <i class="fas fa-map" style="color: #94a3b8; margin-right: 5px; font-size: 0.8rem;"></i>
+                {{ provider.municipality.state.name }}
+            </div>
+            <div class="detail-row">
+                <strong>Municipio</strong>
+                <i class="fas fa-map-pin" style="color: #94a3b8; margin-right: 5px; font-size: 0.8rem;"></i>
+                {{ provider.municipality.name }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer de auditoría -->
+    <div class="audit-footer">
+        <i class="fas fa-history" style="margin-right: 6px;"></i>
+        Registrado el: <strong>{{ provider.created_at.strftime('%d/%m/%Y %H:%M') }}</strong>
+        {% if provider.creator %} por <strong>{{ provider.creator.name }}</strong>{% endif %}
+        {% if provider.updated_at and provider.updated_at != provider.created_at %}
+        &nbsp;·&nbsp;
+        Última actualización: <strong>{{ provider.updated_at.strftime('%d/%m/%Y %H:%M') }}</strong>
+        {% if provider.updater %} por <strong>{{ provider.updater.name }}</strong>{% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

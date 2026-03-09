@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Asistente de Normativa (IA) - SIG-INATUR{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1><i class="fas fa-robot" style="color: var(--primary);"></i> Asistente de Normativa</h1>
+    <span
+        style="font-size: 0.85rem; background: #e0f2fe; color: #0369a1; padding: 0.25rem 0.6rem; border-radius: 9999px;">
+        Beta - Inteligencia Artificial
+    </span>
+</div>
+
+<div class="card" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
+    <div id="chat-container" style="flex: 1; overflow-y: auto; padding: 1.5rem; scroll-behavior: smooth;">
+        <div
+            style="background: #f1f5f9; padding: 1rem; border-radius: 12px; max-width: 80%; margin-bottom: 1rem; border-bottom-left-radius: 2px;">
+            ¡Hola! Soy el asistente inteligente de SIG-INATUR. Puedo ayudarte con dudas sobre la Ley de Turismo y
+            reglamentos internos.
+            <strong>¿En qué puedo ayudarte hoy?</strong>
+        </div>
+    </div>
+
+    <!-- Barra de entrada -->
+    <div style="padding: 1rem; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+        <form id="chat-form" style="display: flex; gap: 0.75rem;">
+            <input type="text" id="user-input" placeholder="Escribe tu consulta sobre la normativa..." required
+                autocomplete="off"
+                style="flex: 1; padding: 0.8rem 1.25rem; border: 1.5px solid #cbd5e1; border-radius: 50px; font-size: 0.95rem; outline: none; transition: border-color 0.2s;">
+            <button type="submit" class="btn"
+                style="border-radius: 50px; padding: 0.8rem 1.5rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const chatContainer = document.getElementById('chat-container');
+
+    function addMessage(text, isUser = false) {
+        const msgDiv = document.createElement('div');
+        msgDiv.style.padding = '1rem';
+        msgDiv.style.borderRadius = '12px';
+        msgDiv.style.maxWidth = '80%';
+        msgDiv.style.marginBottom = '1rem';
+        msgDiv.style.fontSize = '0.95rem';
+        msgDiv.style.lineHeight = '1.5';
+
+        if (isUser) {
+            msgDiv.style.background = 'var(--primary)';
+            msgDiv.style.color = 'white';
+            msgDiv.style.marginLeft = 'auto';
+            msgDiv.style.borderBottomRightRadius = '2px';
+        } else {
+            msgDiv.style.background = '#f1f5f9';
+            msgDiv.style.color = '#334155';
+            msgDiv.style.borderBottomLeftRadius = '2px';
+        }
+
+        msgDiv.innerText = text;
+        chatContainer.appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const question = userInput.value.trim();
+        if (!question) return;
+
+        addMessage(question, true);
+        userInput.value = '';
+
+        // Estado cargando
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading';
+        loadingDiv.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Analizando normativa...';
+        loadingDiv.style.color = '#64748b';
+        loadingDiv.style.fontSize = '0.8rem';
+        loadingDiv.style.padding = '0.5rem';
+        chatContainer.appendChild(loadingDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        try {
+            const response = await fetch('/ia/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question })
+            });
+            const data = await response.json();
+
+            chatContainer.removeChild(loadingDiv);
+
+            if (data.answer) {
+                addMessage(data.answer);
+            } else {
+                addMessage("Lo siento, hubo un error procesando tu consulta.");
+            }
+        } catch (err) {
+            chatContainer.removeChild(loadingDiv);
+            addMessage("Error de conexión con el servidor de IA.");
+        }
+    });
+
+    userInput.addEventListener('focus', () => {
+        userInput.style.borderColor = 'var(--primary)';
+    });
+    userInput.addEventListener('blur', () => {
+        userInput.style.borderColor = '#cbd5e1';
+    });
+</script>
+
+<style>
+    #chat-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #chat-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    .loading {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 0.4;
+        }
+
+        50% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0.4;
+        }
+    }
+</style>
+{% endblock %}
