@@ -2,7 +2,7 @@ from flask import Blueprint, render_template
 from flask_login import login_required
 from models import TouristProvider, Category, State, Municipality, db
 from sqlalchemy import func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -34,7 +34,7 @@ def index():
      .group_by(State.name).all()
     
     # Alerts
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     thirty_days_later = today + timedelta(days=30)
     
     expiring_soon_list = TouristProvider.query.filter(

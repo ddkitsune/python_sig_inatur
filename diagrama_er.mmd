@@ -1,0 +1,47 @@
+erDiagram
+    users {
+        int id PK
+        string name
+        string email
+        string password_hash
+        string role
+        datetime created_at
+        datetime updated_at
+    }
+    states {
+        int id PK
+        string name
+    }
+    municipalities {
+        int id PK
+        string name
+        int state_id FK
+    }
+    categories {
+        int id PK
+        string name
+    }
+    tourist_providers {
+        int id PK
+        string num_rtn
+        string rif
+        string razon_social
+        text direccion
+        string telefono
+        string email
+        int category_id FK
+        int municipality_id FK
+        string status
+        date valid_until
+        int capacity
+        int created_by FK
+        int updated_by FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    states ||--o{ municipalities : "has"
+    municipalities ||--o{ tourist_providers : "locates"
+    categories ||--o{ tourist_providers : "categorizes"
+    users ||--o{ tourist_providers : "creates"
+    users ||--o{ tourist_providers : "updates"

@@ -2,8 +2,27 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import TouristProvider, Category, State, Municipality, db
 from datetime import datetime
+from functools import wraps
 
 providers_bp = Blueprint('providers', __name__)
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'administrador':
+            flash('Acceso denegado. Se requieren privilegios de administrador para esta acción.', 'error')
+            return redirect(url_for('providers.index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def gerente_or_admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role not in ('administrador', 'gerente'):
+            flash('Acceso denegado. Se requieren privilegios de gerente o administrador para esta acción.', 'error')
+            return redirect(url_for('providers.index'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @providers_bp.route('/providers')
 @login_required
@@ -75,6 +94,7 @@ def index():
 
 @providers_bp.route('/providers/export/csv')
 @login_required
+@gerente_or_admin_required
 def export_csv():
     import pandas as pd
     from io import BytesIO
@@ -156,6 +176,7 @@ def show(id):
 
 @providers_bp.route('/providers/<int:id>/edit', methods=['GET', 'POST'])
 @login_required
+@gerente_or_admin_required
 def edit(id):
     provider = TouristProvider.query.get_or_404(id)
     categories = Category.query.all()
@@ -206,6 +227,7 @@ def edit(id):
 
 @providers_bp.route('/providers/<int:id>/delete', methods=['POST'])
 @login_required
+@admin_required
 def delete(id):
     provider = TouristProvider.query.get_or_404(id)
     try:
