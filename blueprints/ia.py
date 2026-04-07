@@ -9,6 +9,14 @@ from models import db, Category, State, Municipality, TouristProvider
 
 ia_bp = Blueprint('ia', __name__, url_prefix='/ia')
 
+# Importaciones globales para RAG, SQL Agent y LangChain (Soluciona latencia por importación dinámica)
+from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import TextLoader, DirectoryLoader, PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_community.utilities import SQLDatabase
+from langchain_community.agent_toolkits import create_sql_agent
+
 # Configuración de carpetas
 DOCS_DIR = os.path.join(os.getcwd(), 'docs_normativa')
 VECTOR_DB_DIR = os.path.join(os.getcwd(), 'vector_db')
@@ -24,22 +32,30 @@ def get_ocr_reader():
         reader = easyocr.Reader(['es'])
     return reader
 
-# Modelo de embeddings (ligero)
+# Modelo de embeddings y LLM optimizados (API vs Local)
 embeddings_model = None
+llm_model = None
 
 def get_embeddings_model():
     global embeddings_model
     if embeddings_model is None:
+        # Hemos vuelto al modelo local porque la API Key de Google arrojó 404 para embeddings. 
+        # Al estar cargado globalmente igual será rápido en caché.
         from langchain_huggingface import HuggingFaceEmbeddings
         embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     return embeddings_model
 
+def get_llm_model():
+    global llm_model
+    if llm_model is None:
+        api_key = os.environ.get('GOOGLE_API_KEY')
+        if api_key:
+            llm_model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3, google_api_key=api_key)
+    return llm_model
+
 def get_vector_store():
     global global_vectorstore
     """Carga o crea la base de datos vectorial."""
-    from langchain_community.vectorstores import FAISS
-    from langchain_community.document_loaders import TextLoader, DirectoryLoader, PyPDFLoader
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
 
     if global_vectorstore is not None:
         return global_vectorstore
@@ -76,40 +92,72 @@ def chat():
 @ia_bp.route('/ask', methods=['POST'])
 @login_required
 def ask():
-    """Procesa una pregunta del usuario usando RAG."""
+    """Procesa una pregunta del usuario usando IA Híbrida (RAG o Agente SQL)."""
     query = request.json.get('question')
     if not query:
         return jsonify({'error': 'No se recibió ninguna pregunta.'}), 400
         
     try:
+        llm = get_llm_model()
+        if not llm:
+            return jsonify({'answer': 'La API Key de Gemini no está configurada.'})
+
+        user_name = current_user.name if current_user.is_authenticated else "Usuario"
+        user_role = current_user.role if current_user.is_authenticated else "Visitante"
+
+        # 1. Agente Inteligente de Decisión (Ruteo Rápido)
+        # El LLM deduce si la pregunta requiere buscar de manera RAG (textos/leyes) o en la Base de Datos (estadística)
+        router_prompt = f"""
+        El usuario ({user_role}) te hizo esta pregunta: "{query}"
+        Responde estrictamente con "SQL" si la pregunta menciona contar, totalizar, buscar prestadores, RTN, RIF, categorías turísticas, hoteles, posadas, usuarios, o datos del sistema.
+        Responde estrictamente con "LEY" si la pregunta es teórica, sobre normativas legales, derechos, deberes, o funcionamiento de INATUR teórico.
+        Responde estrictamente con "GENERAL" si solo está saludando o preguntando quién eres.
+        """
+        decision = llm.invoke(router_prompt).content.strip().upper()
+
+        if "SQL" in decision:
+            # FLUJO: Análisis de Base de Datos en Tiempo Real
+            db_path = os.path.join(os.getcwd(), "instance", "sig_inatur.db")
+            if not os.path.exists(db_path):
+                 db_path = os.path.join(os.getcwd(), "sig_inatur.db") # Fallback
+            
+            db_uri = os.environ.get('DATABASE_URL', f"sqlite:///{db_path}")
+            sql_db = SQLDatabase.from_uri(db_uri)
+            
+            agent_executor = create_sql_agent(llm, db=sql_db, verbose=True)
+            
+            # Contexto especial de seguridad y formato de idioma (Forzar Español en el Agente)
+            sql_instructions = f"Eres un analista de datos del sistema INATUR hablando con {user_name}. Ejecuta la consulta (SELECT) necesaria. La pregunta es: {query} --- REGLAMENTOS CRÍTICOS: 1. NUNCA borres ni insertes datos (Solo SELECT). 2. TRADUCE el resultado y RESPONDE TU MENSAJE FINAL EXCLUSIVAMENTE EN ESPAÑOL VENEZOLANO (Nunca digas 'Here is', usa 'Aquí tienes', etc)."
+            
+            sql_response = agent_executor.invoke({"input": sql_instructions})
+            return jsonify({
+                'answer': sql_response.get("output", "Disculpa, no pude obtener esa información de la base de datos."),
+                'context_snippets': ["Consulta en Base de Datos SIG-INATUR (SQL) en tiempo real."]
+            })
+            
+        elif "GENERAL" in decision:
+            return jsonify({
+                'answer': f"¡Hola {user_name}! Soy el Asistente Inteligente del SIG-INATUR. Estoy aquí para ayudarte tanto con consultas sobre la Base de Datos de Prestadores (cuántos hoteles hay, estatus del RTN, estadísticas) como con consultas sobre las Leyes y Normativas de INATUR. ¿Qué deseas revisar hoy?",
+                'context_snippets': ["Asistencia Inicial del Sistema"]
+            })
+
+        # FLUJO: RAG (Base de Conocimiento de Texto y Leyes)
         vectorstore = get_vector_store()
         if not vectorstore:
-            return jsonify({'answer': 'No hay documentos cargados en la base de conocimiento para responder.'})
+            return jsonify({'answer': 'No hay documentos cargados en la base de conocimiento para responder a nivel legal.'})
             
-        # Similitud de búsqueda (Retrieval)
         docs = vectorstore.similarity_search(query, k=3)
         context = "\n---\n".join([doc.page_content for doc in docs])
         
-        # Integración con Google Gemini (Gratis)
-        import os
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        
-        api_key = os.environ.get('GOOGLE_API_KEY')
-        if not api_key:
-            return jsonify({'answer': 'La API Key de Gemini (GOOGLE_API_KEY) no está configurada en el archivo .env. Por favor, agrégala para que el bot pueda responder.'})
-            
-        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3, google_api_key=api_key)
-        
         prompt = f"""
-        Eres el Asistente Institucional Oficial del Instituto Nacional de Turismo (INATUR).
-        Tu trabajo es responder las preguntas del usuario basándote ESTRICTAMENTE en la información de los siguientes extractos normativos y leyes. 
-        Si la información no se encuentra en el contexto, no inventes, diles cortésmente que debes remitirte a la normativa vigente oficial y no posees esa info.
-        Responde de manera amable, útil y profesional.
+        Eres el Asistente Inteligente Oficial del sistema SIG-INATUR.
+        Estás hablando con {user_name}, su rol es: {user_role.upper()}.
+        Tu función es responder estas cuestiones normativas basándote ESTRICTAMENTE en los siguientes extractos de la ley.
         
         CONTEXTO LEGAL:
         {context}
         
-        PREGUNTA DEL USUARIO:
+        PREGUNTA DEL USUARIO ({user_role.upper()}):
         {query}
         """
         
