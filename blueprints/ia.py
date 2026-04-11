@@ -50,7 +50,7 @@ def get_llm_model():
     if llm_model is None:
         api_key = os.environ.get('GOOGLE_API_KEY')
         if api_key:
-            llm_model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3, google_api_key=api_key)
+            llm_model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3, google_api_key=api_key)
     return llm_model
 
 def get_vector_store():
