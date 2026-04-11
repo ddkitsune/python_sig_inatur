@@ -23,8 +23,8 @@ erDiagram
     }
     tourist_providers {
         int id PK
-        string num_rtn
-        string rif
+        string num_rtn "unique"
+        string rif "unique"
         string razon_social
         text direccion
         string telefono
@@ -40,8 +40,9 @@ erDiagram
         datetime updated_at
     }
 
-    states ||--o{ municipalities : "has"
-    municipalities ||--o{ tourist_providers : "locates"
-    categories ||--o{ tourist_providers : "categorizes"
-    users ||--o{ tourist_providers : "creates"
-    users ||--o{ tourist_providers : "updates"
+    states ||--o{ municipalities : "contiene"
+    municipalities ||--o{ tourist_providers : "ubica"
+    categories ||--o{ tourist_providers : "clasifica"
+    users ||--o{ tourist_providers : "registra (created_by)"
+    users ||--o{ tourist_providers : "actualiza (updated_by)"
+
