@@ -23,7 +23,7 @@ def login():
             
     return render_template('auth/login.html')
 
-@auth_bp.route('/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
     logout_user()

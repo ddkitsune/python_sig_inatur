@@ -8,3 +8,10 @@ vector_db/
 explicacion_proyecto.txt
 node_modules/
 .DS_Store
+*.db
+scratch/
+backups/
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
+branch_structure.json
