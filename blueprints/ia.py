@@ -9,13 +9,9 @@ from models import db, Category, State, Municipality, TouristProvider
 
 ia_bp = Blueprint('ia', __name__, url_prefix='/ia')
 
-# Importaciones globales para RAG, SQL Agent y LangChain (Soluciona latencia por importación dinámica)
-from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import TextLoader, DirectoryLoader, PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain_community.utilities import SQLDatabase
-from langchain_community.agent_toolkits import create_sql_agent
+from langchain_groq import ChatGroq
+# Importaciones pesadas diferidas para acelerar el arranque del servidor
+sql_db_instance = None
 
 # Configuración de carpetas
 DOCS_DIR = os.path.join(os.getcwd(), 'docs_normativa')
@@ -48,10 +44,32 @@ def get_embeddings_model():
 def get_llm_model():
     global llm_model
     if llm_model is None:
-        api_key = os.environ.get('GOOGLE_API_KEY')
+        api_key = os.environ.get('GROQ_API_KEY')
         if api_key:
-            llm_model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3, google_api_key=api_key)
+            # Seleccionamos llama-3.3-70b por ser el modelo actual soportado en Groq
+            llm_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, api_key=api_key)
     return llm_model
+
+def get_sql_db():
+    global sql_db_instance
+    if sql_db_instance is None:
+        from langchain_community.utilities import SQLDatabase
+        
+        # En Flask con SQLite, lo más fiable es la ruta relativa al root
+        db_uri = "sqlite:///instance/sig_inatur.db"
+        
+        try:
+            sql_db_instance = SQLDatabase.from_uri(db_uri)
+            detectadas = sql_db_instance.get_usable_table_names()
+            print(f"\n--- [IA DIAGNÓSTICO] Tablas encontradas: {detectadas} ---")
+            
+            if not detectadas:
+                print("--- [ALERTA] La IA no ve tablas. Verificando archivo... ---")
+        except Exception as e:
+            print(f"--- [ERROR CONEXIÓN SQL] {str(e)} ---")
+            raise e
+            
+    return sql_db_instance
 
 def get_vector_store():
     global global_vectorstore
@@ -59,6 +77,10 @@ def get_vector_store():
 
     if global_vectorstore is not None:
         return global_vectorstore
+
+    from langchain_community.vectorstores import FAISS
+    from langchain_community.document_loaders import TextLoader, DirectoryLoader, PyPDFLoader
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
 
     model = get_embeddings_model()
     if os.path.exists(os.path.join(VECTOR_DB_DIR, "index.faiss")):
@@ -100,7 +122,7 @@ def ask():
     try:
         llm = get_llm_model()
         if not llm:
-            return jsonify({'answer': 'La API Key de Gemini no está configurada.'})
+            return jsonify({'answer': 'La API Key de Groq no está configurada.'})
 
         user_name = current_user.name if current_user.is_authenticated else "Usuario"
         user_role = current_user.role if current_user.is_authenticated else "Visitante"
@@ -117,17 +139,29 @@ def ask():
 
         if "SQL" in decision:
             # FLUJO: Análisis de Base de Datos en Tiempo Real
-            db_path = os.path.join(os.getcwd(), "instance", "sig_inatur.db")
-            if not os.path.exists(db_path):
-                 db_path = os.path.join(os.getcwd(), "sig_inatur.db") # Fallback
+            from langchain_community.agent_toolkits import create_sql_agent
             
-            db_uri = os.environ.get('DATABASE_URL', f"sqlite:///{db_path}")
-            sql_db = SQLDatabase.from_uri(db_uri)
-            
-            agent_executor = create_sql_agent(llm, db=sql_db, verbose=True)
+            sql_db = get_sql_db()
+            agent_executor = create_sql_agent(llm, db=sql_db, verbose=True, max_iterations=5)
             
             # Contexto especial de seguridad y formato de idioma (Forzar Español en el Agente)
-            sql_instructions = f"Eres un analista de datos del sistema INATUR hablando con {user_name}. Ejecuta la consulta (SELECT) necesaria. La pregunta es: {query} --- REGLAMENTOS CRÍTICOS: 1. NUNCA borres ni insertes datos (Solo SELECT). 2. TRADUCE el resultado y RESPONDE TU MENSAJE FINAL EXCLUSIVAMENTE EN ESPAÑOL VENEZOLANO (Nunca digas 'Here is', usa 'Aquí tienes', etc)."
+            sql_instructions = f"""
+            Eres un analista de datos experto del sistema INATUR. 
+            Usuario: {user_name}
+            Pregunta: {query}
+            
+            TABLAS DISPONIBLES:
+            - tourist_providers: Contiene los prestadores de servicio, su RTN, RIF, estatus (activo/vencido) y fecha de vencimiento (valid_until).
+            - categories: Categorías turísticas (Hoteles, Posadas, etc).
+            - municipalities: Municipios.
+            - states: Estados.
+            
+            REGLAS:
+            1. Ejecuta solo consultas SELECT. No intentes modificar la base de datos.
+            2. Si preguntan por RTN vencidos, busca en tourist_providers donde status = 'vencido'.
+            3. Responde siempre en ESPAÑOL VENEZOLANO.
+            4. Se breve pero preciso.
+            """
             
             sql_response = agent_executor.invoke({"input": sql_instructions})
             return jsonify({
