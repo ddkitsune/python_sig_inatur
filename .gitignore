@@ -8,3 +8,6 @@ vector_db/
 explicacion_proyecto.txt
 node_modules/
 .DS_Store
+*.db
+scratch/
+backups/

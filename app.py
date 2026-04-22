@@ -10,7 +10,13 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-sig-inatur')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///sig_inatur.db')
+    
+    # Asegurar que la base de datos se busque siempre en la carpeta 'instance'
+    db_path = os.path.join(app.instance_path, 'sig_inatur.db')
+    if not os.path.exists(app.instance_path):
+        os.makedirs(app.instance_path)
+        
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f"sqlite:///{db_path}")
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
